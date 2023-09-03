@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Events;
+using UnityEngine;
 
 namespace RMC.Core.Architectures.Mini.Context
 {
@@ -12,39 +13,47 @@ namespace RMC.Core.Architectures.Mini.Context
 	/// of arbitrary type. 
 	/// </summary>
 	public class Locator<IItem>
+		where IItem : class
 	{
 		public class AddItemCompletedUnityEvent : UnityEvent<IItem> {}
 
 		//  Events ----------------------------------------
 		public readonly AddItemCompletedUnityEvent OnAddItemCompleted = new AddItemCompletedUnityEvent();
 		
-		//  Properties ------------------------------------
-        
 		//  Fields ----------------------------------------
 		private List<IItem> _items = new List<IItem>();
-        
-		//  Initialization  -------------------------------
-		
+        		
 		//  Methods ---------------------------------------
-		public void AddItem (IItem item)
+		public void AddItem<SubType> (SubType item) where SubType : class, IItem 
 		{
-			if (HasItem<IItem>())
+			if (HasItem<SubType>())
 			{
 				// Allow MAX 0 or 1 instance of T
 				throw new Exception("AddItem() failed. Item already added. Call HasItem<T>() first.");
 			}
+
 			_items.Add(item);
 			OnAddItemCompleted.Invoke(item);
 		}
 		
-		public bool HasItem<SubType>() where SubType :IItem 
+		public bool HasItem<SubType>() 
+			where SubType : class, IItem 
 		{
 			return GetItem<SubType>() != null;
 		}
 		
-		public SubType GetItem<SubType>() where SubType :IItem 
+		public SubType GetItem<SubType>() 
+			where SubType : class, IItem 
 		{
-			return _items.OfType<SubType>().ToList().FirstOrDefault<SubType>();
+			foreach(IItem item in _items)
+			{
+				if(item.GetType() == typeof(SubType))
+				{
+					return item as SubType;
+				}
+			}
+			
+			return null;
 		}
 		
 		public IItem GetItem(Type type)
@@ -58,9 +67,8 @@ namespace RMC.Core.Architectures.Mini.Context
 			{
 				throw new Exception("RemoveItem() failed. Must call HasItem<T>() first.");
 			}
+
 			_items.Remove(item);
 		}
-		
-		//  Event Handlers --------------------------------
 	}
 }
